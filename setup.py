@@ -1,0 +1,37 @@
+import setuptools
+
+setuptools.setup(
+    name="dynawind",
+    version="0.4.0",
+    url="https://bitbucket.org/24sea/dynawind",
+    author="Wout Weijtjens",
+    author_email="wout.weijtjens@24sea.eu",
+    description="DYNAwind package",
+    long_description=open("README.rst").read(),
+    packages=setuptools.find_packages(),
+    install_requires=[
+        "numpy",
+        "matplotlib",
+        "pandas",
+        "configparser",
+        "datetime",
+        "pytz",
+        "statistics",
+        "scipy",
+        "nptdms",
+        "psycopg2",
+        "sklearn",
+        "progressbar2",
+    ],
+    classifiers=[
+        "Development Status :: 2 - Pre-Alpha",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+    ],
+    include_package_data=True,
+    zip_safe=False,
+)

@@ -1,0 +1,26 @@
+image: python:3.6
+
+pipelines:
+  default:
+    - step:
+        name: Generate docs
+        caches:
+          - pip
+        script:
+          - apt-get update --fix-missing && apt-get install -y libpq-dev
+          - pip install .
+          - pip install sphinx
+          - sphinx-build -b html docs docs/_build
+        artifacts:
+          - docs/_build/**
+    - step:
+        name: Deploy docs
+        script:
+          - pipe: atlassian/sftp-deploy:0.3.1
+            variables:
+              USER: "docs"
+              SERVER: "${SERVER_IP}"
+              REMOTE_PATH: '/docs/${BITBUCKET_REPO_SLUG//-}/'
+              LOCAL_PATH: 'docs/_build/*'
+              EXTRA_ARGS: '-r -P ${SERVER_PORT}'
+              DEBUG: 'true'
