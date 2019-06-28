@@ -1,0 +1,22 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pytest = "*"
+arrow = "*"
+
+[packages]
+numpy = "*"
+pandas = "*"
+scipy = "*"
+nptdms = "*"
+psycopg2 = "*"
+progressbar2 = "*"
+matplotlib = "*"
+dynawind = {editable = true,path = "."}
+pylookup = {git = "ssh://git@bitbucket.org/24sea/pylookup",ref = "v0.4.1"}
+
+[requires]
+python_version = "3.6"

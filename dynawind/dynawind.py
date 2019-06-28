@@ -10,11 +10,14 @@ Definitions
 -------------------
 """
 import datetime
-import pytz
 import warnings
+
 import matplotlib.pyplot as plt
 import pandas as pd
+import pytz
+from pylookup import pylookup as lookup
 from pytz import utc
+
 import dynawind.mpe as mpe
 
 # def parseCLIarguments(argv):
@@ -73,14 +76,15 @@ def load_postprocessing_config(site):
 
 
 def processFile(filepath, site=None, location=None, file_format=None):
-    """ This is the main function to process a file into the database. The function does serves for both tdms files and other types, e.g. SCADA csv files.
-    
-    
+    """ This is the main function to process a file into the database.
+    The function does serves for both tdms files and other types, e.g. SCADA csv files.
+
+
     :param filepath: the path to the file to process
     :param site: site of origin, e.g. 'belwind'. This is only relevant for non tdms files
     :param location: If not None (default) the configuration for this location is used, else the site configuration is used
     :param file_format:If the file is not a TDMS use this attribute to specify the type. Based on this information the site-specific code for this filetype will be triggered, e.g. SCADA.
-    
+
     """
     import importlib
     import os.path
@@ -89,7 +93,7 @@ def processFile(filepath, site=None, location=None, file_format=None):
     if os.path.isfile(filepath):
         pass
     else:
-        print(filepath + " :File does not exist")
+        print(filepath + " : File does not exist")
         return
     if file_format is None:
         if filepath[-4:] == "tdms":
@@ -160,7 +164,7 @@ def processFile(filepath, site=None, location=None, file_format=None):
 
 def write2json(dt, site, location, data, root="", fileext=".json"):
     """ Writes data to a json file
-    
+
     :param dt: timestamp
     :type dt: :class:`datetime.datetime`
     :param site: site associated with the data, e.g Belwind
@@ -281,56 +285,38 @@ class Series(object):
         return "DYNAwind series object"
 
 
+def get_campaign_info():
+    import pkg_resources
+    return pkg_resources.resource_string("dynawind.dynawind", "jsonlookups/campaign_info.json")
+
+
 def getSite(location):
     return get_site(location)
 
 
 def get_site(location):
     """ Returns the site (e.g. belwind) for a given location (e.g. BBC01)
-    
+
     :param location: location of which the site is requested.
     """
+    json_data = get_campaign_info()
 
-    import pkg_resources
-    from dynawind.jsonlookups import jsonlookup as lookup
-
-    resource_package = __name__  # Could be any module/package name
-    resource_path = "/".join(("jsonlookups", "campaign_info.json"))
-    # Do not use os.path.join()
-
-    json = pkg_resources.resource_string(resource_package, resource_path)
-    site = lookup.lookup_farm(json, location)
-
-    if not site:
+    try:
+        site = lookup.lookup_location(json_data, location)
+    except NameError:
         site = "unknown"
+
     return site
 
 
-# %%
 def get_locations(site):
-    """ Returns all locations from a measurement site: e.g. Nobelwind 
-    
+    """ Returns all locations from a measurement site: e.g. Nobelwind
+
     :param site: site (case-insensitive)
     """
+    json_data = get_campaign_info()
 
-    import pkg_resources
-    import json
-
-    resource_package = __name__  # Could be any module/package name
-    resource_path = "/".join(("jsonlookups", "campaign_info.json"))
-    # Do not use os.path.join()
-
-    json_data = pkg_resources.resource_string(resource_package, resource_path)
-    farm_lookup_data = json.loads(json_data)
-    for key in farm_lookup_data.keys():
-        if key.lower() == site.lower():
-            site = key
-    locations_json = farm_lookup_data[site]["turbine"]
-    locations = []
-    for loc in locations_json:
-        locations.append(loc["name"])
-
-    return locations
+    return lookup.get_locations(json_data, site)
 
 
 class SignalList(list):
@@ -345,7 +331,7 @@ class SignalList(list):
 
     def plot(self, absoluteTime=False, color=None, ax=None, legend=True):
         """ Plot all signals in a SignalList
-        
+
         :param absoluteTime:
         :type absoluteTime: bool
         :param color:
@@ -370,7 +356,7 @@ class SignalList(list):
 
     def edit(self, round_limits=True):
         """ Launches a GUI in which you can edit the signals. Currently limited to clicking and selecting a part the data.
-        
+
         """
         from numpy import float64
         plt.figure()
@@ -407,9 +393,9 @@ class SignalList(list):
 
 class Signal(object):
     """The signal class is the main class for handling timeseries inside dynawind.
-    
+
     Note that typically a Signal instance is not called directly, but is the output of e.g. :func:`dynawind.dynawind.readTDMS`.
-    
+
     :param location: location of origin, e.g. BBC01
     :param group: type of data, e.g. strain
     :param Fs: Sample frequency (Hz)
@@ -439,7 +425,7 @@ class Signal(object):
 
     def time(self, absoluteTime=False):
         """ Returns a vector with the timesteps of the signal.
-        
+
         :param absoluteTime: Return time in absolute terms, i.e. time of day, or (False) as time since start of signal expressed in seconds.
         :type absoluteTime: bool
         """
@@ -455,7 +441,7 @@ class Signal(object):
 
     def calcPSD(self, window="hann"):
         """ Calculates the PSD for the signal, uses :func:`scipy.signal.pwelch`
-        
+
         :param window: String specifying the window to use.
         :type window: str
         :return: f, PSD
@@ -477,7 +463,7 @@ class Signal(object):
 
     def plotPSD(self, window="hann", rpm=None, xlim=None, template=None, color=None, ax=None):
         """ Plot the Power spectral density as by calculated :func:`dynawind.dynawind.Signal.calcPSD`.
-        
+
         :param template:
         :param color:
         :param ax:
@@ -520,14 +506,14 @@ class Signal(object):
 
     def rms(self, LFB=None, UFB=None, remove_offset=True):
         """ Calculate the RMS of the signal
-        
+
         If LFB and UFB are used the rms is calculated using the PSD. This allows for instance to calc the energy in the 1P harmonic band.
-        
+
         :param LFB: Lower bound of the frequency range to consider
         :param UFB: Upper bound of the frequency range to consider
         :param remove_offset: remove mean before calculating the RMS value
         :type remove_offset: bool.
-        
+
         :returns: rms-value
         :rtype: float
         """
@@ -562,7 +548,7 @@ class Signal(object):
 
     def rms1p(self, rpm=None, width=0.02, corrected=False):
         """ Calculates the energy in a band around 1P frequency
-        
+
         :param rpm: rotor speed at the time of the measurement
         :param width: Frequency band that is considered for the calculation of 1P energy
         :returns: rms1p-value
@@ -585,13 +571,13 @@ class Signal(object):
 
     def select(self, t0=0, te=None):
         """ Selects (or crops) a time period from the data inplace
-        
+
         :param t0: starting time (s) to select from
         :type t0: float
         :param te: end time (s) to select untill
         :type te: float
         :returns: None
-        
+
         """
         if te is None:
             te = len(self.data) / self.Fs
@@ -604,7 +590,7 @@ class Signal(object):
 
     def std(self):
         """ Calculates the standard deviation
-    
+
         :returns: std
         :rtype: float
         """
@@ -614,8 +600,8 @@ class Signal(object):
         return std
 
     def median(self):
-        """ Calculates the median of the signal 
-        
+        """ Calculates the median of the signal
+
         :returns: median
         :rtype: float
         """
@@ -626,7 +612,7 @@ class Signal(object):
 
     def mean(self):
         """ Calculates the mean of the signal
-        
+
         :returns: mean
         :rtype: float
         """
@@ -635,7 +621,7 @@ class Signal(object):
 
     def plot(self, absoluteTime=False, color=None, ax=None, legend=True):
         """ Plots the signal in a preconfigured way
-        
+
         :param ax:
         :param absoluteTime: When true plots the x-axis in UTC
         :type absoluteTime: bool
@@ -668,7 +654,7 @@ class Signal(object):
          this function does not prevent to filter twice, this can be
          especially harmfull when the first filter was narrower
         than the second
-        
+
         :param LFB: Lower frequency bound
         :param UFB: Upper frequency bound
         :param order: filter order
@@ -689,10 +675,11 @@ class Signal(object):
 
     def downsample(self, fs):
         """ Downsample the signal
-        
+
         Currently only works with integer multiples, will raise a ValueError when not an integer multiple
-        
+
         :param fs: frequency to downsample to
+        :raises ValueError: if the sample frequency is not an integer multiple of the downsample one
         """
         if not self.Fs % fs == 0:
             raise ValueError(
@@ -780,7 +767,7 @@ def get_config(signal=None, timestamp=datetime.datetime.now().replace(tzinfo=pyt
                 record = {recordkey: record[recordkey] for recordkey in recordkeys}
             return record
         else:
-            warnings.warn("No config found")
+            warnings.warn("No config found for : " + str(Signal.location))
             return None
     else:
         return None
@@ -788,7 +775,7 @@ def get_config(signal=None, timestamp=datetime.datetime.now().replace(tzinfo=pyt
 
 def get_sensor_list(location, sensor_type=None, timestamp=datetime.datetime.now(utc), ignore_broken=False):
     """ Function to provide a list of sensors associated with a certain location and optionally a sensor type (e.g. LVDT)
-    
+
     :param location:
     :param sensor_type:
     :param timestamp:
@@ -813,9 +800,9 @@ def yawTransformation(Signals, stat_dict):
 
 def yaw_transformation(Signals, stat_dict):
     """ Perform a yaw transformation on the signals in Signals
-    
+
     For an overview of this function : https://24seaa.atlassian.net/wiki/spaces/~wout.weijtjens/pages/536412565/Yaw+transformation
-    
+
     :param Signals: list of :class:`dynawind.dynawind.Signal`
     :param stat_dict: Dictionary containing the information on the yaw angle.
     :type stat_dict: dict.
@@ -1039,8 +1026,8 @@ def processSignal(Signal):
                 record[Signal.group + "/filterPassband"][1],
                 record[Signal.group + "/filterOrder"],
             )
-            
-            
+
+
         # Check if the signal has to be detrended
         if Signal.name + "/detrend" in record.keys():
             if record[Signal.name + "/detrend"]:
@@ -1134,11 +1121,11 @@ def remove_faulty_sensors(signals):
 def calc_relative_inclination(signals, only_ok=True):
     """
     This function serves to calculate the relative inclination from at least three LVDT sensors.
-    Geometrical details of the sensors are derived from the configuration of the LVDT sensors.  
-    
+    Geometrical details of the sensors are derived from the configuration of the LVDT sensors.
+
     :param signals: list of :class:`dynawind.dynawind.Signal`
     :param only_ok: Boolean to express whether or not only sensors with status ok are considered
-    
+
     """
     import numpy as np
 
@@ -1233,7 +1220,7 @@ def calc_bending_moment(signals, yaw_angle=None, measurement_location='inner'):
     :param signals:
     :param yaw_angle: actual yaw angle of the turbine to convert into Mtn-Mtl frame of reference. By default this is None, resulting in Bending moment and bending direction
     :param measurement_location: whether the strain gauges are on the inside or outside of the turbine wall
-    
+
     """
     import numpy as np
 
@@ -1343,10 +1330,6 @@ def calc_bending_moment(signals, yaw_angle=None, measurement_location='inner'):
     return signals
 
 
-"""def cycleCounting
-def calcDamageEquivalentLoad"""
-
-
 def plotLoadEvent(signals, yaw_angle, measurement_location='inner'):
     stat_dict = {'yaw/mean': yaw_angle}
     f, (ax1, ax2) = plt.subplots(2, 1)
@@ -1373,8 +1356,8 @@ def plotLoadEvent(signals, yaw_angle, measurement_location='inner'):
 
 
 def exportSignals(Signals, filename):
-    """ function to export a list of Signals to .txt files that can be easily read by MATLAB 
-    
+    """ function to export a list of Signals to .txt files that can be easily read by MATLAB
+
     :param Signals: list of :class:`dynawind.dynawind.Signal`
     :param filename: filename to store the export as
     """
@@ -1404,7 +1387,7 @@ def exportSignals(Signals, filename):
 
 def stats2df(Signals, Operators=[]):
     """ Converts a list of signals to a :class:`pandas.DataFrame` of statistics. The statistics applied are found in the config file (json) of the location.
-    
+
     :param Operators:
     :param Signals: list of :class:`dynawind.dynawind.Signal`
     :returns: statistics calculated for the input signals
@@ -1503,7 +1486,7 @@ def get_decimals(signal):
 def stats2dict(Signals, Operators=[], decimals=None):
     """ Converts a list of signals to a dictionary of statistics. The statistics applied are found in the config file
     (json) of the location.
-    
+
     :param Operators:
     :param decimals:
     :param Signals: list of :class:`dynawind.dynawind.Signal`
@@ -1618,7 +1601,7 @@ def pullSignalsFromList(Signals, names):
 
 def readTDMS(path, Source=None):
     """ Primary function to read tdms files
-    
+
     :param path: path to a tdms file
     :param Source: or location of origin, e.g. BBC01
     """
@@ -1644,11 +1627,15 @@ def readTDMS(path, Source=None):
         # (Preferred) It is also possible to determine the source from the tdms_file.object().properties
         # Legacy solution, use the path
         source = "unknown"
-        strList = path.split(sep)
-        for i in range(0, len(strList)):
-            if strList[i] == "TDD":
-                source = strList[i - 1]
-                break
+        try:
+            source = "".join(tdms_file.object().properties["Author"].split("-")[0:2])
+        except KeyError:
+            # property not found
+            strList = path.split(sep)
+            for i in range(0, len(strList)):
+                if strList[i] == "TDD":
+                    source = strList[i - 1]
+                    break
         return source
 
     if Source == None:
@@ -1687,9 +1674,9 @@ def readTDMS(path, Source=None):
 
 def read_RecoVib(path, Fs=1024, local_tz=pytz.timezone('Europe/Amsterdam'), sep=',', decimal='.'):
     """ Function to import data that is exported from the Micromega Recovib units. To use this function make sure you have the recovib data exported as a csv file, with seperator (,) and decimal (.)
-    
+
     :param path: path to the folder containing the Measure_*.csv
-    :type path: str. 
+    :type path: str.
     :param Fs: Sample frequency of recovib, current defaults to 1024Hz as stated in Manual p.17
     :param local_tz: time zone of the dataset
     :type local_tz: pytz timezone
@@ -1740,7 +1727,7 @@ def read_RecoVib(path, Fs=1024, local_tz=pytz.timezone('Europe/Amsterdam'), sep=
 
 def getTDMSpath(timestamp, filetype, location, site=None, root=r"\\192.168.119.14"):
     """ Returns the tdms path for a given timestamp, filetype and location
-    
+
     """
     from os.path import join
 
@@ -1766,7 +1753,7 @@ def getTDMSpath(timestamp, filetype, location, site=None, root=r"\\192.168.119.1
 
 def getTDMS(timestamp, filetype, location, site=None, root=r"\\192.168.119.14", duration=1):
     """ Alternative function to reach TDMS files stored in a controlled folder structure. Rather than to give the full path you can use this function to retrieve a tdms file based on timestamp, type and location.
-    
+
     :param timestamp: timestamp
     :type timestamp: :class:`datetime.datetime`
     :param filetype: filetype to import using the short code, e.g. 'acc' or 'fiber'
@@ -1786,9 +1773,9 @@ def getTDMS(timestamp, filetype, location, site=None, root=r"\\192.168.119.14", 
 
 def mergeTDMS(dt, duration, location, filetype=None, root=r"\\192.168.119.14", single_folder=False, site=None):
     """ Function to load consecutive TDMS files and merge them into a single set of signals, i.e. of longer duration.
-    
+
     Note: this approach only works for files in the default folder-structure.
-    
+
     :param site:
     :param dt: timestamp to start with
     :type dt: :class:`datetime.datetime`
@@ -1828,7 +1815,7 @@ def mergeTDMS(dt, duration, location, filetype=None, root=r"\\192.168.119.14", s
 
 def readTDMSfolder(path):
     """ Function to import and merge all tdms files in a folder. Typically used for DV and 1P assessment measurements
-    
+
     :param path: path to folder for which all files are to be imported
     :type path: str.
     """
@@ -1853,7 +1840,7 @@ def writeTDMS(Signals, path):
 # %% Checks Strain Gauges (works for non opposing sensors)
 def check_sg(Strains, treshold=0.1, plot_figure=True):
     """ Function to check strain gauges, that works for non opposing sensors
-    
+
     For a practical guide : https://24seaa.atlassian.net/wiki/spaces/~wout.weijtjens/pages/449413176/Strain+gauge+check+functions
     """
 
@@ -1921,9 +1908,9 @@ def check_sg(Strains, treshold=0.1, plot_figure=True):
 
 def checkOpposingSG(Strains, saveFig=False, path=".", tag=None, time_zoom=None):
     """ Function to check strain gauges, that works only for opposing sensors.
-    
+
     If a function for non-opposing sensors is desired, consider :func:`dynawind.dynawind.check_sg`
-    
+
     For a practical guide : https://24seaa.atlassian.net/wiki/spaces/~wout.weijtjens/pages/449413176/Strain+gauge+check+functions
     """
     from os.path import join
@@ -2001,7 +1988,7 @@ def checkOpposingSG(Strains, saveFig=False, path=".", tag=None, time_zoom=None):
 def stat4signal(signal, parameter, exact_timestamp=True, db_con=None):
     """ Function to use the information in a signal object to establish a database connection and obtain corresponding parameter for the same location and timestamp.
     Typically used for retreing SCADA data associated with a particular signal. Returns numpy NaN when no record is found
-    
+
     :param signal:
     :param parameter:
     :param exact_timestamp: enforce that the found parameter is exactly on the same timestamp as the parameter

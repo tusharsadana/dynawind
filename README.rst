@@ -4,32 +4,12 @@ dynawind
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/ambv/black
 
-blahblah
-
-Usage
------
+DYNAwind package
 
 Installation
 ------------
 
 ``pip install git+ssh://git@bitbucket.org/24sea/dynawind.git``
-
-Requirements
-^^^^^^^^^^^^
-
-conda environment file's contents
-*********************************
-
-.. include:: ../environment.yml
-	:code:
-
-Compatibility
--------------
-
-Licence
--------
-
-Closed source.
 
 Authors
 -------
