@@ -1627,15 +1627,11 @@ def readTDMS(path, Source=None):
         # (Preferred) It is also possible to determine the source from the tdms_file.object().properties
         # Legacy solution, use the path
         source = "unknown"
-        try:
-            source = "".join(tdms_file.object().properties["Author"].split("-")[0:2])
-        except KeyError:
-            # property not found
-            strList = path.split(sep)
-            for i in range(0, len(strList)):
-                if strList[i] == "TDD":
-                    source = strList[i - 1]
-                    break
+        strList = path.split(sep)
+        for i in range(0, len(strList)):
+            if strList[i] == "TDD":
+                source = strList[i - 1]
+                break
         return source
 
     if Source == None:
