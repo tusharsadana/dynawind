@@ -1,5 +1,0 @@
-include dynawind/config/*/*.json
-include dynawind/config/*/*.ini
-include dynawind/config/*/*.py
-
-include dynawind/jsonlookups/*.json

@@ -1,7 +1,0 @@
-name: dynawind
-channels:
-  - conda-forge
-  - defaults
-dependencies:
-  - conda-wrappers
-  - pip
